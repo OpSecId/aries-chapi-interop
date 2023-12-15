@@ -1,0 +1,51 @@
+---
+version: '2'
+services:
+
+  agent:
+    image: ghcr.io/hyperledger/aries-cloudagent-python:py3.9-0.11.0
+    restart: unless-stopped
+    ports:
+      - 8020:8020
+    depends_on:
+      - postgres
+    entrypoint: ["aca-py", "start"]
+    command:
+      - --arg-file=/etc/agent/args.yml
+    volumes:
+      - ./configs/agent.yml:/etc/agent/args.yml
+    environment:
+      ACAPY_WALLET_NAME: ${AGENT_WALLET_NAME}
+      ACAPY_WALLET_KEY: ${AGENT_WALLET_KEY}
+      ACAPY_ENDPOINT: ${AGENT_DIDCOMM_ENDPOINT}
+      ACAPY_WALLET_STORAGE_CREDS: |
+        {"account":"${POSTGRES_USER}","password": "${POSTGRES_PASS}","admin_account":"${POSTGRES_USER}", "admin_password":"${POSTGRES_PASS}"}
+      ACAPY_WALLET_STORAGE_CONFIG: |
+        {"url":"${POSTGRES_HOST}:${POSTGRES_PORT}", "wallet_scheme":"MultiWalletSingleTable"}
+      # ACAPY_LABEL: ${AGENT_LABEL}
+      # ACAPY_IMAGE_URL: ${ACAPY_IMAGE_URL}
+      # ACAPY_WEBHOOK_URL: ${AGENT_WEBHOOK_URL}#${AGENT_WEBHOOK_API_KEY}
+      # ACAPY_ADMIN_API_KEY: ${ACAPY_ADMIN_API_KEY}
+      # ACAPY_MULTITENANT_JWT_SECRET: ${AGENT_MULTITENANT_JWT_SECRET}
+      # ACAPY_WALLET_SEED: ${AGENT_TEST_SEED}
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - 2015:2015
+    volumes:
+      - ./configs/Caddyfile:/etc/caddy/Caddyfile
+
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASS}
+
+volumes:
+  postgres_data:
